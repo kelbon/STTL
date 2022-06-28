@@ -1,0 +1,10 @@
+BasedOnStyle:  Google
+ColumnLimit : 110
+AllowShortFunctionsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+UseTab: Never
+IndentWidth: 2
+NamespaceIndentation: All
+PointerAlignment: Left
