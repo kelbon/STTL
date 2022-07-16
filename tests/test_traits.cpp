@@ -1,6 +1,5 @@
 
 #include <vector>
-#include <iostream>
 
 #include "type_algorithms.hpp"
 
@@ -19,17 +18,9 @@ consteval auto foo() {
   return sttl::pattern_matching<[](std::integral_constant<char, Cs>) { return Cs; }...>;
 }
 
-template<sttl::fixed_string S>
-constexpr char parse_name() {
-  return *S.begin();
-}
-template <sttl::fixed_string S>
-constexpr int parse_value() {
-  return *(S.begin() + 4) - '0';
-}
 
 int main() {
-  std::cout << foo<'a', 'b', 'c'>()(std::integral_constant<char, 'c'>{});
+  static_assert(foo<'a', 'b', 'c'>()(std::integral_constant<char, 'c'>{}) == 'c');
   constexpr auto j = -10000_i;
   int j_0 = j;
   constexpr int64_t j_3 = j;

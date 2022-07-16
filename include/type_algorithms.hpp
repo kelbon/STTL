@@ -20,7 +20,12 @@
 #else
 #define CONSTEVAL constexpr
 #endif
-
+// Yes, msvc do not support EBO which is already GUARANTEED by C++ standard for ~13 years
+#if defined(_MSC_VER)
+#define AA_MSVC_EBO __declspec(empty_bases)
+#else
+#define AA_MSVC_EBO
+#endif
 namespace sttl {
 
   template <typename, size_t>
@@ -30,10 +35,10 @@ namespace sttl {
 
 namespace noexport {
   template <typename, typename...>
-  struct typevecimpl;
+  struct AA_MSVC_EBO typevecimpl;
 
   template <size_t... Is, typename... Ts>
-  struct typevecimpl<std::index_sequence<Is...>, Ts...> : ::sttl::typenode<Ts, Is>... {};
+  struct AA_MSVC_EBO typevecimpl<std::index_sequence<Is...>, Ts...> : ::sttl::typenode<Ts, Is>... {};
 
   // for integer_literal
   CONSTEVAL std::int_least64_t parse_int(std::initializer_list<char> list) {
@@ -88,7 +93,7 @@ namespace sttl {
   };
 
   // NOT A TYPE! =) type analogue of npos
-  using notype = typevec<>;
+  using notype = union {};
 
   template <typename T>
   constexpr inline bool is_notype_v = std::is_same_v<notype, std::remove_cvref_t<T>>;
@@ -172,15 +177,13 @@ namespace sttl {
       value(std::type_identity<int>{});
     };
     template <projection Proj>
-    using projected_t = decltype(Proj{}(std::type_identity<int>{}));
+    using projected_t = decltype(std::remove_cvref_t<Proj>{}(std::type_identity<int>{}));
 
     template <typename T, projection Proj>
     constexpr inline auto projected_v = Proj{}(std::type_identity<T>{});
 
     template <typename F>
-    concept unary_predicate = projection<F> && requires(F value) {
-      { value(std::type_identity<int>{}) } -> std::convertible_to<bool>;
-    };
+    concept unary_predicate = projection<F> && std::convertible_to<bool, projected_t<F>>;
 
   }  // namespace types
 
@@ -530,13 +533,18 @@ namespace sttl {
 
     template <typename T0, typename... Ts>
     CONSTEVAL auto pop_front_impl(typevec<T0, Ts...>) -> typevec<Ts...>;
-    CONSTEVAL auto pop_front_impl(typevec<>) -> typevec<>;
+    CONSTEVAL auto pop_front_impl(typevec<>) -> notype;
 
     template <pack T>
     using pop_front = decltype(pop_front_impl(T{}));
 
-    template <pack T>
-    using pop_back = reverse<pop_front<reverse<T>>>;
+    template <pack P>
+    using pop_back = typename decltype([] {
+      if constexpr (P::size == 0)
+        return std::type_identity<notype>{};
+      else
+        return std::type_identity<reverse<pop_front<reverse<P>>>>{};
+    }())::type;
 
     template <typename What, typename T0, typename... Ts>
     CONSTEVAL auto replace_front_with_impl(typevec<T0, Ts...>) -> typevec<What, Ts...>;
