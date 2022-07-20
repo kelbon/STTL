@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <concepts>
 #include <optional>
+#include <bit>
 
 // TODO waiting for support
 #ifdef _MSC_VER
