@@ -80,7 +80,7 @@ namespace sttl {
     constexpr bool operator==(null_t) const noexcept {
       return true;
     }
-    template<one_of<std::nullptr_t, std::nullopt_t, std::monostate> T>
+    template<one_of<std::nullptr_t, std::nullopt_t> T>
     CONSTEVAL operator T() const noexcept {
       struct _ {
       } any_empty;
