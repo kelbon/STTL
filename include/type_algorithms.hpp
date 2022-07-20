@@ -9,6 +9,7 @@
 #include <string_view>
 #include <algorithm>
 #include <concepts>
+#include <optional>
 
 // TODO waiting for support
 #ifdef _MSC_VER
@@ -68,15 +69,29 @@ namespace sttl {
   template <typename T>
   constexpr inline auto debug_print = noexport::debug<T>{};
 
-  // NULLSTRUCT like void but better(may be in tuple for example or returned from function by value)
-  struct nullstruct {
+  // CONCEPT ONE_OF
+
+  template <typename T, typename... Ts>
+  concept one_of = (std::same_as<T, Ts> || ...);
+
+  // NULL_T like void but better(may be in tuple for example or returned from function by value)
+  struct null_t {
     // for using as NTTP
-    constexpr bool operator==(nullstruct) const noexcept {
+    constexpr bool operator==(null_t) const noexcept {
       return true;
     }
+    template<one_of<std::nullptr_t, std::nullopt_t, std::monostate> T>
+    CONSTEVAL operator T() const noexcept {
+      struct _ {
+      } any_empty;
+      return std::bit_cast<T>(any_empty);
+    }
   };
+
+  constexpr inline null_t null = {};
+
   template <typename T>
-  constexpr inline bool is_nullstruct_v = std::is_same_v<nullstruct, std::remove_cvref_t<T>>;
+  constexpr inline bool is_null_v = std::is_same_v<null_t, std::remove_cvref_t<T>>;
 
   template <typename... Ts>
   struct typevec : noexport::typevecimpl<std::index_sequence_for<Ts...>, Ts...> {
@@ -145,11 +160,6 @@ namespace sttl {
 
   template <typename T, typename... Ts>  // 0 for case when sizeof...(Ts) == 0
   constexpr inline size_t count = (0 + ... + std::is_same_v<T, Ts>);
-
-  // CONCEPT ONE_OF
-
-  template <typename T, typename... Ts>
-  concept one_of = (std::same_as<T, Ts> || ...);
 
   // CONCEPT NOT_A
   
@@ -752,6 +762,15 @@ namespace sttl {
   template<typename T, size_t N>
   using c_array = T[N];
 
+  // for creating concepts for checking if invocable without conversations
+  // Example:
+  // template<typename T> concept X = requires(exactly<int> i, T value) { T.foo(i); }
+  // checks if T has foo which accepts exactly int without conversations (or accepts any type)
+  template<typename T>
+  struct exactly {
+    template <std::same_as<T> U>
+    constexpr operator U() noexcept;
+  };
 }  // namespace sttl
 
 // in global namespace because its really global(for all literals),
