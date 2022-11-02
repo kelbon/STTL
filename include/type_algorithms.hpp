@@ -11,6 +11,9 @@
 #include <concepts>
 #include <optional>
 #include <bit>
+#include <cassert>
+#include <functional>
+#include <limits>
 
 // TODO waiting for support
 #ifdef _MSC_VER
@@ -695,36 +698,63 @@ namespace sttl {
   // variant Compile Time
   // can contain references, const and volatile types only when initialized from std::type_identity<T>!
   template <typename... Ts>
-  struct variant_ct {
-    size_t index_ = npos;
+  struct tagged_enum {
+    using size_type = std::conditional_t<(sizeof...(Ts) < std::numeric_limits<uint_least8_t>::max()),
+                                         std::uint_least8_t, std::size_t>;
+    // not private because it must be literal type
+    size_type _index = static_cast<size_type>(-1);
 
-    constexpr variant_ct() = default;
+    constexpr tagged_enum() = default;
 
+    // precondition : 'i' must be in range [0, sizeof...(Ts))
+    constexpr tagged_enum(size_type i) noexcept : _index(i) {
+      assert(i < sizeof...(Ts));
+    }
+    // precondition : 'i' must be in range [0, sizeof...(Ts))
+    constexpr tagged_enum& operator=(size_type i) noexcept {
+      assert(i < sizeof...(Ts));
+      _index = i;
+      return *this;
+    }
     // clang-format off
     template <typename T>
-    requires(containts<std::remove_cvref_t<T>, Ts...>)
-    constexpr variant_ct(T&&) noexcept
-        : index_(find_first<std::remove_cvref_t<T>, Ts...>)
-    {}
-
-    template <typename T>
     requires(containts<T, Ts...>)
-    constexpr variant_ct(std::type_identity<T>) noexcept
-        : index_(find_first<T, Ts...>)
+    constexpr tagged_enum(std::type_identity<T>) noexcept
+        : _index(find_first<T, Ts...>)
     {}
     // clang-format on
+    constexpr tagged_enum(const tagged_enum&) = default;
+    constexpr tagged_enum(tagged_enum&&) = default;
+    constexpr tagged_enum& operator=(const tagged_enum&) noexcept = default;
+    constexpr tagged_enum& operator=(tagged_enum&&) noexcept = default;
 
     constexpr size_t index() const noexcept {
-      return index_;
+      return _index;
     }
   };
 
-  // visit for variant_ct
+  // visit for tagged_enum
 
-  template <instance_of<variant_ct> auto... Vars, typename F>
-  constexpr decltype(auto) visit_ct(F&& foo) {
+  // exactly one instanciation of function F
+  template <instance_of<tagged_enum> auto... Vars, typename F>
+  constexpr decltype(auto) visit_enum(F&& foo) {
     return std::forward<F>(foo)(
         std::type_identity<types::element_t<Vars.index(), types::extract<decltype(Vars)>>>{}...);
+  }
+  // similar to std::visit, but for enum
+  template <typename F, typename... Ts>
+  constexpr decltype(auto) visit_enum(F&& f, tagged_enum<Ts...> ts) {
+    constexpr std::array tbl{[]<typename T>(std::type_identity<T>) {
+      return +[](F&& _f) {
+        return _f(std::type_identity<Ts>{});
+      };
+    }(std::type_identity<Ts>{})...};
+    return tbl[ts.index()](std::forward<F>(f));
+  }
+  template<typename F, typename V1, typename... Vs>
+  constexpr decltype(auto) visit_enum(F&& f, V1 var, Vs... vars) {
+    return ::sttl::visit_enum(
+        [&](auto&& v) { return ::sttl::visit_enum(std::bind_front(std::forward<F>(f), v), vars...); }, var);
   }
 
   // Foos must be functions(possibly template), atleast one of them must accept all input arguments.
@@ -772,11 +802,11 @@ namespace sttl {
     template <std::same_as<T> U>
     constexpr operator U() noexcept;
   };
+
 }  // namespace sttl
 
 // in global namespace because its really global(for all literals),
 // and dont need using namespace...
-
 template <sttl::fixed_string L>
 CONSTEVAL auto operator""_fixs() noexcept {
   return L;

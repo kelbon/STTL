@@ -1,6 +1,4 @@
 
-#include <vector>
-
 #include "type_algorithms.hpp"
 
 constexpr int Fooo(sttl::string_literal<"hello">) {
@@ -18,12 +16,12 @@ consteval auto foo() {
   return sttl::pattern_matching<[](std::integral_constant<char, Cs>) { return Cs; }...>;
 }
 
-
 int main() {
   static_assert(foo<'a', 'b', 'c'>()(std::integral_constant<char, 'c'>{}) == 'c');
   constexpr auto j = -10000_i;
   int j_0 = j;
   constexpr int64_t j_3 = j;
+  (void)j_0, void(j_3);
   constexpr auto la = "hello"_fixs + "world"_fixs;
   (void)la;
   static_assert(Fooo(-0_i) == true);
@@ -79,16 +77,20 @@ int main() {
   static_assert(std::is_same_v<sttl::element_t<0, void>, void>);
   static_assert(std::is_same_v<sttl::types::element_t<0, sttl::typevec<void>>, void>);
 
-  using var = sttl::variant_ct<int, float, double, bool>;
+  using var = sttl::tagged_enum<int, float, double, bool>;
   static_assert(sttl::containts<int, int, float>);
   static_assert(sttl::containts<void, int, float, void>);
   static_assert(sttl::containts<int, int>);
   static_assert(!sttl::containts<char, int, float>);
   static_assert(!sttl::containts<int>);
   constexpr auto xvar = var{0};
-  constexpr auto yvar = var{false};
-
-  static_assert(sttl::visit_ct<xvar, yvar, xvar, xvar>([]<typename... Ts>(std::type_identity<Ts>...) {
+  constexpr auto yvar = var{std::type_identity<bool>{}};
+  static_assert(sttl::visit_enum(
+      []<typename... Ts>(std::type_identity<Ts>...) {
+        return std::is_same_v<sttl::typevec<Ts...>, sttl::typevec<int, bool, int>>;
+      },
+      xvar, yvar, xvar));
+  static_assert(sttl::visit_enum<xvar, yvar, xvar, xvar>([]<typename... Ts>(std::type_identity<Ts>...) {
                   return (sizeof(Ts) + ...);
                 }) == (sizeof(bool) + 3 * sizeof(int)));
   constexpr auto _1 = []<sttl::one_of<int, float> T, sttl::not_a<double> U>(T, U) {
@@ -122,10 +124,10 @@ int main() {
   static_assert(
       std::is_same_v<sttl::types::extract<std::vector<int>>, sttl::typevec<int, std::allocator<int>>>);
   static_assert(sttl::is_notype_v<sttl::types::extract<int>>);
-
-  static_assert(std::is_same_v<sttl::types::pop_back<sttl::typevec<int, float>>, sttl::typevec<int>>);
-  static_assert(std::is_same_v<sttl::types::pop_back<sttl::typevec<int>>, sttl::typevec<>>);
-  static_assert(sttl::is_notype_v<sttl::types::pop_back<sttl::typevec<>>>);
+  // do not work on msvc =( buggy(
+//  static_assert(std::is_same_v<sttl::types::pop_back<sttl::typevec<int, float>>, sttl::typevec<int>>);
+//  static_assert(std::is_same_v<sttl::types::pop_back<sttl::typevec<int>>, sttl::typevec<>>);
+//  static_assert(sttl::is_notype_v<sttl::types::pop_back<sttl::typevec<>>>);
 
   using misres = sttl::types::mismatch<sttl::typevec<int, float, double>, sttl::typevec<int, float, double, void>>;
   static_assert(misres::index == sttl::npos);
