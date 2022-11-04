@@ -840,10 +840,18 @@ namespace sttl {
     constexpr std::size_t count = sizeof...(Vs);
     if constexpr (count < 300) {
       switch (enum0.index()) {
+#ifdef _MSC_VER
+#define STTL_UNREACHABLE __assume(false);
+#else
+#define STTL_UNREACHABLE __builtin_unreachable();
+#endif
+        // TODO std::unreachable()
 #define ENUM_SWITCH_CASE(INDEX)                                 \
   case INDEX: {                                                 \
     if constexpr (INDEX < count) {                              \
       return std::forward<F>(f)(std::get<INDEX>(enum0.values)); \
+    } else {                                                    \
+      STTL_UNREACHABLE                                          \
     }                                                           \
   }
         ENUM_SWITCH_CASE(0)
@@ -1148,14 +1156,8 @@ namespace sttl {
         ENUM_SWITCH_CASE(299)
 #undef ENUM_SWITCH_CASE
       }
-      #ifdef _MSC_VER
-      __assume(false);
-      #else
-      __builtin_unreachable();
-      #endif
-      // TODO std::unreachable()
+      STTL_UNREACHABLE
     } else {
-      // TODO switch here
       constexpr std::array tbl{(+[](F&& _f) { return std::forward<F>(_f)(Vs); })...};
       return tbl[enum0.index()](std::forward<F>(f));
     }
