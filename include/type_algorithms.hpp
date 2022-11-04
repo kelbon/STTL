@@ -726,9 +726,9 @@ namespace sttl {
   template <typename T, auto Value>
   constexpr inline auto enumerator = enumerator_t<T, Value>{};
   // helper type for tagged_enum, used to set index (ctor and operator=)
-  struct index {
+  struct index_t {
     std::size_t i;
-    constexpr index(std::size_t i) noexcept : i(i) {
+    constexpr index_t(std::size_t i) noexcept : i(i) {
     }
   };
   // enum, where types (std::type_identity<T>) used as names
@@ -752,7 +752,7 @@ namespace sttl {
 
     // ctor from index
     // precondition : 'i' must be in range [0, sizeof...(Ts))
-    constexpr explicit tagged_enum(index i) noexcept : _index(i.i) {
+    constexpr explicit tagged_enum(index_t i) noexcept : _index(i.i) {
       assert(i.i < sizeof...(Ts));
     }
     // ctor from type ('name' of value for this enum)
@@ -778,7 +778,7 @@ namespace sttl {
     constexpr tagged_enum& operator=(tagged_enum&&) noexcept = default;
 
     // precondition : 'i' must be in range [0, sizeof...(Ts))
-    constexpr tagged_enum& operator=(index i) noexcept {
+    constexpr tagged_enum& operator=(index_t i) noexcept {
       assert(i.i < sizeof...(Ts));
       _index = i.i;
       return *this;

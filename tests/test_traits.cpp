@@ -84,7 +84,7 @@ int main() {
   static_assert(sttl::contains<int, int>);
   static_assert(!sttl::contains<char, int, float>);
   static_assert(!sttl::contains<int>);
-  constexpr auto xvar = var{sttl::index(0)};
+  constexpr auto xvar = var{sttl::index_t(0)};
   static_assert(std::is_convertible_v<sttl::valuevec<'5', 1>, sttl::valuevec<int('5'), 1>>);
   constexpr auto yvar = var{std::type_identity<bool>{}};
   using my_enum = sttl::tagged_enum<sttl::enumerator<int, 4>, sttl::enumerator<float, 8>,
@@ -94,7 +94,7 @@ int main() {
         return std::is_same_v<sttl::typevec<Ts...>, sttl::typevec<int, char, bool>> &&
                std::is_same_v<sttl::valuevec<Values...>, sttl::valuevec<4, 16, 1>>;
       },
-      my_enum(sttl::index(0)), my_enum(sttl::index(3)), my_enum(sttl::index(2))));
+      my_enum(sttl::index_t(0)), my_enum(sttl::index_t(3)), my_enum(sttl::index_t(2))));
   static_assert(sttl::visit_types(
       []<typename T>(T) { return std::is_same_v<T, sttl::typevec<int, bool, int>>; }, xvar, yvar, xvar));
   static_assert(sttl::visit_types<xvar, yvar, xvar, xvar>([]<typename... Ts>(sttl::typevec<Ts...>) {
@@ -104,7 +104,7 @@ int main() {
   enum struct B { b };
   using my_enum_ab = sttl::Enum<A::a, B::b>;
   constexpr my_enum_ab ab_v = sttl::valuevec<A::a>{};
-  constexpr my_enum_ab ab_vv(sttl::index(1));
+  constexpr my_enum_ab ab_vv(sttl::index_t(1));
   static_assert(sttl::visit_values(sttl::pattern_matching<[](sttl::valuevec<A::a, B::b>) { return true; },
                                                           [](auto&&...) {
                                                             return false;
