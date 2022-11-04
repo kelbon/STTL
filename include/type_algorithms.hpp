@@ -205,7 +205,7 @@ namespace sttl {
   constexpr inline size_t count_if = (0 + ... + static_cast<bool>(Pred(std::type_identity<Ts>{})));
 
   template <typename T, typename... Ts>
-  constexpr inline bool containts = count<T, Ts...> != 0;
+  constexpr inline bool contains = count<T, Ts...> != 0;
 
 }  // namespace sttl
 
@@ -277,13 +277,14 @@ namespace sttl {
 
   // returns index of first T in Ts...
   template <typename T, typename... Ts>
-  constexpr inline size_t find_first = [] {
-    size_t result = sttl::npos;
-    size_t i = -1;
-    // for guaranteed sequence
-    ORDERED{((++i, std::is_same_v<T, Ts>) && result == sttl::npos && (result = i))...};
-    return result;
-  }  // INVOKED HERE
+  constexpr inline size_t find_first =
+      [] {
+        size_t result = sttl::npos;
+        size_t i = -1;
+        // for guaranteed sequence
+        ORDERED{((++i, std::is_same_v<T, Ts>)&&result == sttl::npos && (result = i))...};
+        return result;
+      }  // INVOKED HERE
   ();
 
   template <auto Pred, typename... Ts, size_t... Is>
@@ -337,22 +338,24 @@ namespace sttl {
   using filter = decltype(filter_impl<Pred, Ts...>());  // INVOKED HERE
 
   template <typename T, typename... Ts>
-  constexpr inline size_t find_last = [] {
-    size_t index = npos;
-    size_t i = -1;
-    ORDERED{((++i, std::is_same_v<T, Ts>) && (index = i))...};
-    return index;
-  }  // INVOKED HERE
+  constexpr inline size_t find_last =
+      [] {
+        size_t index = npos;
+        size_t i = -1;
+        ORDERED{((++i, std::is_same_v<T, Ts>)&&(index = i))...};
+        return index;
+      }  // INVOKED HERE
   ();
 
   // Why int_least64_t?
   // - no unsigned type because may be signed
   // - no intmax_t, because can have different MAX on different platforms,
-  // so possible a compilation error for same code like integer_literal<1000000>; 
+  // so possible a compilation error for same code like integer_literal<1000000>;
   //- int64_t is optional by C++ standard, platform can not support it
-  template<std::int_least64_t Value>
+  template <std::int_least64_t Value>
   struct integer_literal : constant<Value> {
-    // must be <= int64_t max, for case when int_least64 is more then 64 bit, same compilations on every platform
+    // must be <= int64_t max, for case when int_least64 is more then 64 bit, same compilations on every
+    // platform
     static_assert(Value <= 0xff'ff'ff'ff'ff'ff'ff'ff);
     CONSTEVAL auto operator-() const noexcept {
       return integer_literal<-Value>{};
@@ -360,18 +363,20 @@ namespace sttl {
     CONSTEVAL auto operator+() const noexcept {
       return integer_literal<Value>{};
     }
+    // clang-format off
     template <std::integral T>
-    requires (std::in_range<T>(Value))
+    requires(std::in_range<T>(Value))
     constexpr operator T() const noexcept {
+      // clang-format on
       return Value;
     }
   };
 
-  #if defined(__clang__) || defined(__GNUC__)
-  #define PRETTY_FUNC_NAME __PRETTY_FUNCTION__
-  #elif defined(_MSC_VER)
-  #define PRETTY_FUNC_NAME __FUNCSIG__
-  #endif
+#if defined(__clang__) || defined(__GNUC__)
+#define PRETTY_FUNC_NAME __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+#define PRETTY_FUNC_NAME __FUNCSIG__
+#endif
   // NOT NULLTERMINATED
   template <typename Char, size_t N>
   struct fixed_string {
@@ -384,7 +389,7 @@ namespace sttl {
     constexpr fixed_string(const Char (&arr)[N + 1]) noexcept {
       std::copy_n(std::begin(arr), N, chars.begin());
     }
-    template<typename Traits>
+    template <typename Traits>
     constexpr fixed_string(std::array<Char, N> arr) noexcept : chars(arr) {
     }
     static constexpr size_t size() noexcept {
@@ -410,7 +415,7 @@ namespace sttl {
 
   template <typename Char, size_t N0, size_t N1>
   constexpr fixed_string<Char, N0 + N1> operator+(const fixed_string<Char, N0>& left,
-                                                         const fixed_string<Char, N1>& right) noexcept {
+                                                  const fixed_string<Char, N1>& right) noexcept {
     fixed_string<Char, N0 + N1> result{};
     auto it = std::copy(left.begin(), left.end(), result.begin());
     std::copy(right.begin(), right.end(), it);
@@ -449,25 +454,26 @@ namespace sttl {
     CONSTEVAL auto operator<=>(string_literal<L>) const noexcept {
       return V <=> L;
     }
-
   };
 
   namespace types {
 
     template <typename T, pack P>
-    constexpr inline size_t count = []<typename... Ts>(typevec<Ts...>) {
-      return (0 + ... + std::is_same_v<T, Ts>);
-    }  // INVOKED HERE
+    constexpr inline size_t count =
+        []<typename... Ts>(typevec<Ts...>) {
+          return (0 + ... + std::is_same_v<T, Ts>);
+        }  // INVOKED HERE
     (P{});
 
     template <unary_predicate auto Pred, pack P>
-    constexpr inline size_t count_if = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::count_if<Pred, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline size_t count_if =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::count_if<Pred, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <typename T, pack P>
-    constexpr inline bool containts = count<T, P> != 0;
+    constexpr inline bool contains = count<T, P> != 0;
 
     template <unary_predicate auto Pred, pack P>
     using filter = decltype(filter_impl<Pred>(P{}));
@@ -479,21 +485,24 @@ namespace sttl {
         decltype(rotate_impl < N >= 0 ? N : P::size + N > (P{}, std::make_index_sequence<P::size>{}));
 
     template <pack P, unary_predicate auto Pred>
-    constexpr inline bool all_of = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::all_of<Pred, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline bool all_of =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::all_of<Pred, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <pack P, unary_predicate auto Pred>
-    constexpr inline bool atleast_one_of = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::atleast_one_of<Pred, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline bool atleast_one_of =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::atleast_one_of<Pred, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <pack P, unary_predicate auto Pred>
-    constexpr inline bool none_of = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::none_of<Pred, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline bool none_of =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::none_of<Pred, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <size_t I, pack P>
@@ -527,9 +536,10 @@ namespace sttl {
     constexpr inline size_t find = noexport::typevec_index_impl<T, P>(0);
 
     template <typename T, pack P>
-    constexpr inline size_t find_first = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::find_first<T, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline size_t find_first =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::find_first<T, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <pack P>
@@ -584,9 +594,10 @@ namespace sttl {
     using push_back = decltype(push_back_impl<T>(U{}));
 
     template <typename T, pack P>
-    constexpr inline size_t find_last = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::find_last<T, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline size_t find_last =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::find_last<T, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <pack Small, pack Big>
@@ -659,13 +670,13 @@ namespace sttl {
         constexpr size_t sz = [compare] {
           std::array vec{projected_v<Types, Proj>...};
           std::sort(vec.begin(), vec.end(), compare);
-          auto last = std::unique(vec.begin(), vec.end()); // TODO compare here same as for sort?
+          auto last = std::unique(vec.begin(), vec.end());  // TODO compare here same as for sort?
           return std::distance(vec.begin(), last);
         }();
         constexpr auto arr = [compare]<size_t Sz>(constant<Sz>) {
           std::array vec{projected_v<Types, Proj>...};
           std::sort(vec.begin(), vec.end(), compare);
-          (void)std::unique(vec.begin(), vec.end()); // TODO compare here same as for sort ?
+          (void)std::unique(vec.begin(), vec.end());  // TODO compare here same as for sort ?
           std::array<projected_t<Proj>, Sz> result;
           std::copy_n(vec.begin(), Sz, result.begin());
           return result;
@@ -695,32 +706,70 @@ namespace sttl {
   template <typename... Ts>
   using last_t = typename decltype((std::type_identity<notype>{}, ..., std::type_identity<Ts>{}))::type;
 
-  // variant Compile Time
-  // can contain references, const and volatile types only when initialized from std::type_identity<T>!
-  template <typename... Ts>
+  template <auto... Vs>
+  struct valuevec {
+    // clang-format off
+    template <auto... Vs1>
+    requires(((Vs1 == static_cast<decltype(Vs1)>(Vs)) && ...))
+    constexpr operator valuevec<Vs1...>() const noexcept {
+      return valuevec<static_cast<decltype(Vs1)>(Vs)...>{};
+    }
+    // clang-format on
+  };
+
+  template <typename T, auto Value>
+  struct enumerator_t : std::type_identity<T>, valuevec<Value> {
+    using value_type = decltype(Value);
+    static constexpr auto value = Value;
+  };
+
+  template <typename T, auto Value>
+  constexpr inline auto enumerator = enumerator_t<T, Value>{};
+  // helper type for tagged_enum, used to set index (ctor and operator=)
+  struct index_t {
+    std::size_t i;
+    constexpr index_t(std::size_t i) noexcept : i(i) {
+    }
+  };
+  // enum, where types (std::type_identity<T>) used as names
+  // types must be unique(Values may be non unique and different types)
+  template <enumerator_t... Ts>
   struct tagged_enum {
+   private:
+    enum { check = assert_unique<typename decltype(Ts)::type...> };
+
+   public:
     using size_type = std::conditional_t<(sizeof...(Ts) < std::numeric_limits<uint_least8_t>::max()),
                                          std::uint_least8_t, std::size_t>;
+    static constexpr std::tuple values{Ts...};
+    static constexpr std::size_t count = sizeof...(Ts);
+
     // not private because it must be literal type
-    size_type _index = static_cast<size_type>(-1);
+    size_type _index;
 
-    constexpr tagged_enum() = default;
+    // use index(i) if need index and std::type_identity<T> if need to specify type
+    tagged_enum(std::integral auto) = delete;
 
+    // ctor from index
     // precondition : 'i' must be in range [0, sizeof...(Ts))
-    constexpr tagged_enum(size_type i) noexcept : _index(i) {
-      assert(i < sizeof...(Ts));
+    constexpr explicit tagged_enum(index_t i) noexcept : _index(i.i) {
+      assert(i.i < sizeof...(Ts));
     }
-    // precondition : 'i' must be in range [0, sizeof...(Ts))
-    constexpr tagged_enum& operator=(size_type i) noexcept {
-      assert(i < sizeof...(Ts));
-      _index = i;
-      return *this;
-    }
+    // ctor from type ('name' of value for this enum)
+    // analogue for 'enum A { a }; A val = A::a;'
+    // for expressions like my_enum val = int{}; etc
     // clang-format off
     template <typename T>
-    requires(containts<T, Ts...>)
+    requires(contains<T, typename decltype(Ts)::type...>)
+    constexpr tagged_enum(const T&) noexcept
+        : _index(find_first<T, typename decltype(Ts)::type...>)
+    {}
+    // ctor from type ('name' of value for this enum)
+    // analogue for 'enum A { a }; A val = A::a;'
+    template <typename T>
+    requires(contains<T, typename decltype(Ts)::type...>)
     constexpr tagged_enum(std::type_identity<T>) noexcept
-        : _index(find_first<T, Ts...>)
+        : _index(find_first<T, typename decltype(Ts)::type...>)
     {}
     // clang-format on
     constexpr tagged_enum(const tagged_enum&) = default;
@@ -728,35 +777,439 @@ namespace sttl {
     constexpr tagged_enum& operator=(const tagged_enum&) noexcept = default;
     constexpr tagged_enum& operator=(tagged_enum&&) noexcept = default;
 
+    // precondition : 'i' must be in range [0, sizeof...(Ts))
+    constexpr tagged_enum& operator=(index_t i) noexcept {
+      assert(i.i < sizeof...(Ts));
+      _index = i.i;
+      return *this;
+    }
+    // clang-format off
+    template<typename T>
+    requires(contains<T, typename decltype(Ts)::type...>)
+    constexpr tagged_enum& operator=(const T&) noexcept {
+      // clang-format on
+      _index = find_first<T, typename decltype(Ts)::type...>;
+      return *this;
+    }
+    // clang-format off
+    template<typename T>
+    requires(contains<T, typename decltype(Ts)::type...>)
+    constexpr tagged_enum& operator=(std::type_identity<T>) noexcept {
+      // clang-format on
+      _index = find_first<T, typename decltype(Ts)::type...>;
+      return *this;
+    }
+
+    // returns runtime index of enumerator 'stored' currently
     constexpr size_t index() const noexcept {
       return _index;
     }
   };
 
-  // visit for tagged_enum
+  // Types must be unique
+  // associates each type in Ts with its index in pack,
+  // like enum { a, b, c } a = 0, b = 1, c = 2 etc
+  // usage example:
+  // using my_enum = sttl::type_enum<int, float, double>;
+  // my_enum v = int{}; // creates v assotiated with 'int' and index 0
+  // my_enum v0 = std::type_identity<int>{}; // creates v0 assotiated with 'float' and index 1
+  // my_enum v1(sttl::index(2)); // creates v1 assotiated with 'double' and index 2
+  template <typename... Ts>
+  using type_enum = tagged_enum<enumerator<Ts, find_first<Ts, Ts...>>...>;
 
+  // Values must be unique
+  // usage example:
+  // using my_enum = sttl::Enum<5, 3.14, false>;
+  // my_enum val(sttl::index(1)); // creates val assotiated with 3.14 and index 1
+  // my_enum val1 = sttl::valuevec<false>; // creates val1 assotiated with false and index 2
+  template<auto... Values>
+  using Enum = tagged_enum<enumerator<valuevec<Values>, Values>...>;
+
+  // invokes function F with enumerator<Type, Value>... from Enums
   // exactly one instanciation of function F
-  template <instance_of<tagged_enum> auto... Vars, typename F>
+  // clang-format off
+  template <auto... Enums, typename F>
+  requires(((Enums.index() < Enums.count) && ...))
   constexpr decltype(auto) visit_enum(F&& foo) {
-    return std::forward<F>(foo)(
-        std::type_identity<types::element_t<Vars.index(), types::extract<decltype(Vars)>>>{}...);
+    // clang-format on
+    return std::forward<F>(foo)(std::get<Enums.index()>(Enums.values)...);
   }
-  // similar to std::visit, but for enum
-  template <typename F, typename... Ts>
-  constexpr decltype(auto) visit_enum(F&& f, tagged_enum<Ts...> ts) {
-    constexpr std::array tbl{[]<typename T>(std::type_identity<T>) {
-      return +[](F&& _f) {
-        return _f(std::type_identity<Ts>{});
-      };
-    }(std::type_identity<Ts>{})...};
-    return tbl[ts.index()](std::forward<F>(f));
+  // invokes function F with enumerator_t<Type, Value> currently contained in 'enum0'
+  template <typename F, enumerator_t... Vs>
+  constexpr decltype(auto) visit_enum(F&& f, tagged_enum<Vs...> enum0) {
+    constexpr std::size_t count = sizeof...(Vs);
+    // without optimizations so much useless labels generated
+    #ifdef _NDEBUG
+    constexpr bool RELEASE = true;
+    #else
+    constexpr bool RELEASE = false;
+    #endif
+    if constexpr (count < 300 && RELEASE) {
+      switch (enum0.index()) {
+#ifdef _MSC_VER
+#define STTL_UNREACHABLE __assume(false);
+#else
+#define STTL_UNREACHABLE __builtin_unreachable();
+#endif
+        // TODO std::unreachable()
+#define ENUM_SWITCH_CASE(INDEX)                                 \
+  case INDEX: {                                                 \
+    if constexpr (INDEX < count) {                              \
+      return std::forward<F>(f)(std::get<INDEX>(enum0.values)); \
+    } else {                                                    \
+      STTL_UNREACHABLE                                          \
+    }                                                           \
   }
-  template<typename F, typename V1, typename... Vs>
-  constexpr decltype(auto) visit_enum(F&& f, V1 var, Vs... vars) {
+        ENUM_SWITCH_CASE(0)
+        ENUM_SWITCH_CASE(1)
+        ENUM_SWITCH_CASE(2)
+        ENUM_SWITCH_CASE(3)
+        ENUM_SWITCH_CASE(4)
+        ENUM_SWITCH_CASE(5)
+        ENUM_SWITCH_CASE(6)
+        ENUM_SWITCH_CASE(7)
+        ENUM_SWITCH_CASE(8)
+        ENUM_SWITCH_CASE(9)
+        ENUM_SWITCH_CASE(10)
+        ENUM_SWITCH_CASE(11)
+        ENUM_SWITCH_CASE(12)
+        ENUM_SWITCH_CASE(13)
+        ENUM_SWITCH_CASE(14)
+        ENUM_SWITCH_CASE(15)
+        ENUM_SWITCH_CASE(16)
+        ENUM_SWITCH_CASE(17)
+        ENUM_SWITCH_CASE(18)
+        ENUM_SWITCH_CASE(19)
+        ENUM_SWITCH_CASE(20)
+        ENUM_SWITCH_CASE(21)
+        ENUM_SWITCH_CASE(22)
+        ENUM_SWITCH_CASE(23)
+        ENUM_SWITCH_CASE(24)
+        ENUM_SWITCH_CASE(25)
+        ENUM_SWITCH_CASE(26)
+        ENUM_SWITCH_CASE(27)
+        ENUM_SWITCH_CASE(28)
+        ENUM_SWITCH_CASE(29)
+        ENUM_SWITCH_CASE(30)
+        ENUM_SWITCH_CASE(31)
+        ENUM_SWITCH_CASE(32)
+        ENUM_SWITCH_CASE(33)
+        ENUM_SWITCH_CASE(34)
+        ENUM_SWITCH_CASE(35)
+        ENUM_SWITCH_CASE(36)
+        ENUM_SWITCH_CASE(37)
+        ENUM_SWITCH_CASE(38)
+        ENUM_SWITCH_CASE(39)
+        ENUM_SWITCH_CASE(40)
+        ENUM_SWITCH_CASE(41)
+        ENUM_SWITCH_CASE(42)
+        ENUM_SWITCH_CASE(43)
+        ENUM_SWITCH_CASE(44)
+        ENUM_SWITCH_CASE(45)
+        ENUM_SWITCH_CASE(46)
+        ENUM_SWITCH_CASE(47)
+        ENUM_SWITCH_CASE(48)
+        ENUM_SWITCH_CASE(49)
+        ENUM_SWITCH_CASE(50)
+        ENUM_SWITCH_CASE(51)
+        ENUM_SWITCH_CASE(52)
+        ENUM_SWITCH_CASE(53)
+        ENUM_SWITCH_CASE(54)
+        ENUM_SWITCH_CASE(55)
+        ENUM_SWITCH_CASE(56)
+        ENUM_SWITCH_CASE(57)
+        ENUM_SWITCH_CASE(58)
+        ENUM_SWITCH_CASE(59)
+        ENUM_SWITCH_CASE(60)
+        ENUM_SWITCH_CASE(61)
+        ENUM_SWITCH_CASE(62)
+        ENUM_SWITCH_CASE(63)
+        ENUM_SWITCH_CASE(64)
+        ENUM_SWITCH_CASE(65)
+        ENUM_SWITCH_CASE(66)
+        ENUM_SWITCH_CASE(67)
+        ENUM_SWITCH_CASE(68)
+        ENUM_SWITCH_CASE(69)
+        ENUM_SWITCH_CASE(70)
+        ENUM_SWITCH_CASE(71)
+        ENUM_SWITCH_CASE(72)
+        ENUM_SWITCH_CASE(73)
+        ENUM_SWITCH_CASE(74)
+        ENUM_SWITCH_CASE(75)
+        ENUM_SWITCH_CASE(76)
+        ENUM_SWITCH_CASE(77)
+        ENUM_SWITCH_CASE(78)
+        ENUM_SWITCH_CASE(79)
+        ENUM_SWITCH_CASE(80)
+        ENUM_SWITCH_CASE(81)
+        ENUM_SWITCH_CASE(82)
+        ENUM_SWITCH_CASE(83)
+        ENUM_SWITCH_CASE(84)
+        ENUM_SWITCH_CASE(85)
+        ENUM_SWITCH_CASE(86)
+        ENUM_SWITCH_CASE(87)
+        ENUM_SWITCH_CASE(88)
+        ENUM_SWITCH_CASE(89)
+        ENUM_SWITCH_CASE(90)
+        ENUM_SWITCH_CASE(91)
+        ENUM_SWITCH_CASE(92)
+        ENUM_SWITCH_CASE(93)
+        ENUM_SWITCH_CASE(94)
+        ENUM_SWITCH_CASE(95)
+        ENUM_SWITCH_CASE(96)
+        ENUM_SWITCH_CASE(97)
+        ENUM_SWITCH_CASE(98)
+        ENUM_SWITCH_CASE(99)
+        ENUM_SWITCH_CASE(100)
+        ENUM_SWITCH_CASE(101)
+        ENUM_SWITCH_CASE(102)
+        ENUM_SWITCH_CASE(103)
+        ENUM_SWITCH_CASE(104)
+        ENUM_SWITCH_CASE(105)
+        ENUM_SWITCH_CASE(106)
+        ENUM_SWITCH_CASE(107)
+        ENUM_SWITCH_CASE(108)
+        ENUM_SWITCH_CASE(109)
+        ENUM_SWITCH_CASE(110)
+        ENUM_SWITCH_CASE(111)
+        ENUM_SWITCH_CASE(112)
+        ENUM_SWITCH_CASE(113)
+        ENUM_SWITCH_CASE(114)
+        ENUM_SWITCH_CASE(115)
+        ENUM_SWITCH_CASE(116)
+        ENUM_SWITCH_CASE(117)
+        ENUM_SWITCH_CASE(118)
+        ENUM_SWITCH_CASE(119)
+        ENUM_SWITCH_CASE(120)
+        ENUM_SWITCH_CASE(121)
+        ENUM_SWITCH_CASE(122)
+        ENUM_SWITCH_CASE(123)
+        ENUM_SWITCH_CASE(124)
+        ENUM_SWITCH_CASE(125)
+        ENUM_SWITCH_CASE(126)
+        ENUM_SWITCH_CASE(127)
+        ENUM_SWITCH_CASE(128)
+        ENUM_SWITCH_CASE(129)
+        ENUM_SWITCH_CASE(130)
+        ENUM_SWITCH_CASE(131)
+        ENUM_SWITCH_CASE(132)
+        ENUM_SWITCH_CASE(133)
+        ENUM_SWITCH_CASE(134)
+        ENUM_SWITCH_CASE(135)
+        ENUM_SWITCH_CASE(136)
+        ENUM_SWITCH_CASE(137)
+        ENUM_SWITCH_CASE(138)
+        ENUM_SWITCH_CASE(139)
+        ENUM_SWITCH_CASE(140)
+        ENUM_SWITCH_CASE(141)
+        ENUM_SWITCH_CASE(142)
+        ENUM_SWITCH_CASE(143)
+        ENUM_SWITCH_CASE(144)
+        ENUM_SWITCH_CASE(145)
+        ENUM_SWITCH_CASE(146)
+        ENUM_SWITCH_CASE(147)
+        ENUM_SWITCH_CASE(148)
+        ENUM_SWITCH_CASE(149)
+        ENUM_SWITCH_CASE(150)
+        ENUM_SWITCH_CASE(151)
+        ENUM_SWITCH_CASE(152)
+        ENUM_SWITCH_CASE(153)
+        ENUM_SWITCH_CASE(154)
+        ENUM_SWITCH_CASE(155)
+        ENUM_SWITCH_CASE(156)
+        ENUM_SWITCH_CASE(157)
+        ENUM_SWITCH_CASE(158)
+        ENUM_SWITCH_CASE(159)
+        ENUM_SWITCH_CASE(160)
+        ENUM_SWITCH_CASE(161)
+        ENUM_SWITCH_CASE(162)
+        ENUM_SWITCH_CASE(163)
+        ENUM_SWITCH_CASE(164)
+        ENUM_SWITCH_CASE(165)
+        ENUM_SWITCH_CASE(166)
+        ENUM_SWITCH_CASE(167)
+        ENUM_SWITCH_CASE(168)
+        ENUM_SWITCH_CASE(169)
+        ENUM_SWITCH_CASE(170)
+        ENUM_SWITCH_CASE(171)
+        ENUM_SWITCH_CASE(172)
+        ENUM_SWITCH_CASE(173)
+        ENUM_SWITCH_CASE(174)
+        ENUM_SWITCH_CASE(175)
+        ENUM_SWITCH_CASE(176)
+        ENUM_SWITCH_CASE(177)
+        ENUM_SWITCH_CASE(178)
+        ENUM_SWITCH_CASE(179)
+        ENUM_SWITCH_CASE(180)
+        ENUM_SWITCH_CASE(181)
+        ENUM_SWITCH_CASE(182)
+        ENUM_SWITCH_CASE(183)
+        ENUM_SWITCH_CASE(184)
+        ENUM_SWITCH_CASE(185)
+        ENUM_SWITCH_CASE(186)
+        ENUM_SWITCH_CASE(187)
+        ENUM_SWITCH_CASE(188)
+        ENUM_SWITCH_CASE(189)
+        ENUM_SWITCH_CASE(190)
+        ENUM_SWITCH_CASE(191)
+        ENUM_SWITCH_CASE(192)
+        ENUM_SWITCH_CASE(193)
+        ENUM_SWITCH_CASE(194)
+        ENUM_SWITCH_CASE(195)
+        ENUM_SWITCH_CASE(196)
+        ENUM_SWITCH_CASE(197)
+        ENUM_SWITCH_CASE(198)
+        ENUM_SWITCH_CASE(199)
+        ENUM_SWITCH_CASE(200)
+        ENUM_SWITCH_CASE(201)
+        ENUM_SWITCH_CASE(202)
+        ENUM_SWITCH_CASE(203)
+        ENUM_SWITCH_CASE(204)
+        ENUM_SWITCH_CASE(205)
+        ENUM_SWITCH_CASE(206)
+        ENUM_SWITCH_CASE(207)
+        ENUM_SWITCH_CASE(208)
+        ENUM_SWITCH_CASE(209)
+        ENUM_SWITCH_CASE(210)
+        ENUM_SWITCH_CASE(211)
+        ENUM_SWITCH_CASE(212)
+        ENUM_SWITCH_CASE(213)
+        ENUM_SWITCH_CASE(214)
+        ENUM_SWITCH_CASE(215)
+        ENUM_SWITCH_CASE(216)
+        ENUM_SWITCH_CASE(217)
+        ENUM_SWITCH_CASE(218)
+        ENUM_SWITCH_CASE(219)
+        ENUM_SWITCH_CASE(220)
+        ENUM_SWITCH_CASE(221)
+        ENUM_SWITCH_CASE(222)
+        ENUM_SWITCH_CASE(223)
+        ENUM_SWITCH_CASE(224)
+        ENUM_SWITCH_CASE(225)
+        ENUM_SWITCH_CASE(226)
+        ENUM_SWITCH_CASE(227)
+        ENUM_SWITCH_CASE(228)
+        ENUM_SWITCH_CASE(229)
+        ENUM_SWITCH_CASE(230)
+        ENUM_SWITCH_CASE(231)
+        ENUM_SWITCH_CASE(232)
+        ENUM_SWITCH_CASE(233)
+        ENUM_SWITCH_CASE(234)
+        ENUM_SWITCH_CASE(235)
+        ENUM_SWITCH_CASE(236)
+        ENUM_SWITCH_CASE(237)
+        ENUM_SWITCH_CASE(238)
+        ENUM_SWITCH_CASE(239)
+        ENUM_SWITCH_CASE(240)
+        ENUM_SWITCH_CASE(241)
+        ENUM_SWITCH_CASE(242)
+        ENUM_SWITCH_CASE(243)
+        ENUM_SWITCH_CASE(244)
+        ENUM_SWITCH_CASE(245)
+        ENUM_SWITCH_CASE(246)
+        ENUM_SWITCH_CASE(247)
+        ENUM_SWITCH_CASE(248)
+        ENUM_SWITCH_CASE(249)
+        ENUM_SWITCH_CASE(250)
+        ENUM_SWITCH_CASE(251)
+        ENUM_SWITCH_CASE(252)
+        ENUM_SWITCH_CASE(253)
+        ENUM_SWITCH_CASE(254)
+        ENUM_SWITCH_CASE(255)
+        ENUM_SWITCH_CASE(256)
+        ENUM_SWITCH_CASE(257)
+        ENUM_SWITCH_CASE(258)
+        ENUM_SWITCH_CASE(259)
+        ENUM_SWITCH_CASE(260)
+        ENUM_SWITCH_CASE(261)
+        ENUM_SWITCH_CASE(262)
+        ENUM_SWITCH_CASE(263)
+        ENUM_SWITCH_CASE(264)
+        ENUM_SWITCH_CASE(265)
+        ENUM_SWITCH_CASE(266)
+        ENUM_SWITCH_CASE(267)
+        ENUM_SWITCH_CASE(268)
+        ENUM_SWITCH_CASE(269)
+        ENUM_SWITCH_CASE(270)
+        ENUM_SWITCH_CASE(271)
+        ENUM_SWITCH_CASE(272)
+        ENUM_SWITCH_CASE(273)
+        ENUM_SWITCH_CASE(274)
+        ENUM_SWITCH_CASE(275)
+        ENUM_SWITCH_CASE(276)
+        ENUM_SWITCH_CASE(277)
+        ENUM_SWITCH_CASE(278)
+        ENUM_SWITCH_CASE(279)
+        ENUM_SWITCH_CASE(280)
+        ENUM_SWITCH_CASE(281)
+        ENUM_SWITCH_CASE(282)
+        ENUM_SWITCH_CASE(283)
+        ENUM_SWITCH_CASE(284)
+        ENUM_SWITCH_CASE(285)
+        ENUM_SWITCH_CASE(286)
+        ENUM_SWITCH_CASE(287)
+        ENUM_SWITCH_CASE(288)
+        ENUM_SWITCH_CASE(289)
+        ENUM_SWITCH_CASE(290)
+        ENUM_SWITCH_CASE(291)
+        ENUM_SWITCH_CASE(292)
+        ENUM_SWITCH_CASE(293)
+        ENUM_SWITCH_CASE(294)
+        ENUM_SWITCH_CASE(295)
+        ENUM_SWITCH_CASE(296)
+        ENUM_SWITCH_CASE(297)
+        ENUM_SWITCH_CASE(298)
+        ENUM_SWITCH_CASE(299)
+#undef ENUM_SWITCH_CASE
+      }
+      STTL_UNREACHABLE
+    } else {
+      constexpr std::array tbl{(+[](F&& _f) { return std::forward<F>(_f)(Vs); })...};
+      return tbl[enum0.index()](std::forward<F>(f));
+    }
+  }
+  // invokes function F with enumerator_t<Type, Value>... currently contained in enum1, enums...
+  template <typename F, typename Enum1, typename... Enums>
+  constexpr decltype(auto) visit_enum(F&& f, Enum1 enum1, Enums... enums) {
     return ::sttl::visit_enum(
-        [&](auto&& v) { return ::sttl::visit_enum(std::bind_front(std::forward<F>(f), v), vars...); }, var);
+        [&](auto&& v) { return ::sttl::visit_enum(std::bind_front(std::forward<F>(f), v), enums...); },
+        enum1);
   }
-
+  // invokes function F with sttl::valuevec<Values...> from Enums
+  // exactly one instanciation of function F
+  // clang-format off
+  template <auto... Enums, typename F>
+  requires(((Enums.index() < Enums.count) && ...))
+  constexpr decltype(auto) visit_values(F&& foo) {
+    // clang-format on
+    return std::forward<F>(foo)(valuevec<std::get<Enums.index()>(Enums.values)...>{});
+  }
+  // invokes 'f' with sttl::valuevec<EnumValues...>, where EnumValues is currently contained values
+  template<typename F, typename... Enums>
+  constexpr decltype(auto) visit_values(F&& f, Enums... enums) {
+    return visit_enum([&]<typename... EnumValues>(
+                          EnumValues...) { return std::forward<F>(f)(valuevec<EnumValues::value...>{}); },
+                      enums...);
+  }
+  // invokes function F with sttl::typevec<Types...> from Enums
+  // exactly one instanciation of function F
+  // clang-format off
+  template <auto... Enums, typename F>
+  requires(((Enums.index() < Enums.count) && ...))
+  constexpr decltype(auto) visit_types(F&& f) {
+    // clang-format on
+    return visit_enum<Enums...>(
+        [&]<typename... Ts>(Ts...) { return std::forward<F>(f)(typevec<typename Ts::type...>{}); });
+  }
+  // invokes 'f' with sttl::typevec<EnumTypes...>, where EnumTypes is currently contained types
+  template <typename F, typename... Enums>
+  constexpr decltype(auto) visit_types(F&& f, Enums... enums) {
+    return visit_enum(
+        [&]<typename... EnumValues>(EnumValues...) {
+          return std::forward<F>(f)(typevec<typename EnumValues::type...>{});
+        },
+        enums...);
+  }
   // Foos must be functions(possibly template), atleast one of them must accept all input arguments.
   // Foos also must be unique types
   template <typename... Foos>
@@ -790,14 +1243,14 @@ namespace sttl {
   using first_t = T0;
 
   // for better quality of fcn code in 2k22
-  template<typename T, size_t N>
+  template <typename T, size_t N>
   using c_array = T[N];
 
   // for creating concepts for checking if invocable without conversations
   // Example:
   // template<typename T> concept X = requires(exactly<int> i, T value) { T.foo(i); }
   // checks if T has foo which accepts exactly int without conversations (or accepts any type)
-  template<typename T>
+  template <typename T>
   struct exactly {
     template <std::same_as<T> U>
     constexpr operator U() noexcept;
