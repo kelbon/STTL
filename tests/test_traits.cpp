@@ -55,11 +55,11 @@ int main() {
   static_assert(sttl::types::none_of<sttl::typevec<>, convertible_to_bool>);
   static_assert(!sttl::types::atleast_one_of<sttl::typevec<>, convertible_to_bool>);
 
-  static_assert(sttl::containts<int, int>);
-  static_assert(!sttl::containts<int>);
-  static_assert(sttl::containts<void, int, float, void>);
-  static_assert(!sttl::containts<void, int, float>);
-  static_assert(!sttl::types::containts<void, sttl::typevec<int, float>>);
+  static_assert(sttl::contains<int, int>);
+  static_assert(!sttl::contains<int>);
+  static_assert(sttl::contains<void, int, float, void>);
+  static_assert(!sttl::contains<void, int, float>);
+  static_assert(!sttl::types::contains<void, sttl::typevec<int, float>>);
 
   static_assert(sttl::count_if<is_array, int, int[], int[10]> == 2);
   static_assert(sttl::count_if<is_array> == 0);
@@ -77,21 +77,29 @@ int main() {
   static_assert(std::is_same_v<sttl::element_t<0, void>, void>);
   static_assert(std::is_same_v<sttl::types::element_t<0, sttl::typevec<void>>, void>);
 
-  using var = sttl::tagged_enum<int, float, double, bool>;
-  static_assert(sttl::containts<int, int, float>);
-  static_assert(sttl::containts<void, int, float, void>);
-  static_assert(sttl::containts<int, int>);
-  static_assert(!sttl::containts<char, int, float>);
-  static_assert(!sttl::containts<int>);
+  using var = sttl::Enum<int, float, double, bool>;
+  static_assert(sttl::contains<int, int, float>);
+  static_assert(sttl::contains<void, int, float, void>);
+  static_assert(sttl::contains<int, int>);
+  static_assert(!sttl::contains<char, int, float>);
+  static_assert(!sttl::contains<int>);
   constexpr auto xvar = var{0};
   constexpr auto yvar = var{std::type_identity<bool>{}};
+  using my_enum = sttl::tagged_enum<sttl::enum_value<int, 4>, sttl::enum_value<float, 8>,
+                                    sttl::enum_value<bool, 1>, sttl::enum_value<char, 16>>;
   static_assert(sttl::visit_enum(
-      []<typename... Ts>(std::type_identity<Ts>...) {
-        return std::is_same_v<sttl::typevec<Ts...>, sttl::typevec<int, bool, int>>;
+      []<typename... Ts>(Ts...) {
+        return std::is_same_v<sttl::typevec<typename Ts::type...>, sttl::typevec<int, char, bool>> &&
+               std::is_same_v<std::index_sequence<Ts::value...>, std::index_sequence<4, 16, 1>>;
+      },
+      my_enum(0), my_enum(3), my_enum(2)));
+  static_assert(sttl::visit_enum(
+      []<typename... Ts>(Ts...) {
+        return std::is_same_v<sttl::typevec<typename Ts::type...>, sttl::typevec<int, bool, int>>;
       },
       xvar, yvar, xvar));
-  static_assert(sttl::visit_enum<xvar, yvar, xvar, xvar>([]<typename... Ts>(std::type_identity<Ts>...) {
-                  return (sizeof(Ts) + ...);
+  static_assert(sttl::visit_enum<xvar, yvar, xvar, xvar>([]<typename... Ts>(Ts...) {
+                  return (sizeof(typename Ts::type) + ...);
                 }) == (sizeof(bool) + 3 * sizeof(int)));
   constexpr auto _1 = []<sttl::one_of<int, float> T, sttl::not_a<double> U>(T, U) {
     return 0;
@@ -125,9 +133,9 @@ int main() {
       std::is_same_v<sttl::types::extract<std::vector<int>>, sttl::typevec<int, std::allocator<int>>>);
   static_assert(sttl::is_notype_v<sttl::types::extract<int>>);
   // do not work on msvc =( buggy(
-//  static_assert(std::is_same_v<sttl::types::pop_back<sttl::typevec<int, float>>, sttl::typevec<int>>);
-//  static_assert(std::is_same_v<sttl::types::pop_back<sttl::typevec<int>>, sttl::typevec<>>);
-//  static_assert(sttl::is_notype_v<sttl::types::pop_back<sttl::typevec<>>>);
+  //  static_assert(std::is_same_v<sttl::types::pop_back<sttl::typevec<int, float>>, sttl::typevec<int>>);
+  //  static_assert(std::is_same_v<sttl::types::pop_back<sttl::typevec<int>>, sttl::typevec<>>);
+  //  static_assert(sttl::is_notype_v<sttl::types::pop_back<sttl::typevec<>>>);
 
   using misres = sttl::types::mismatch<sttl::typevec<int, float, double>, sttl::typevec<int, float, double, void>>;
   static_assert(misres::index == sttl::npos);

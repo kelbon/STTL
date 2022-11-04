@@ -205,7 +205,7 @@ namespace sttl {
   constexpr inline size_t count_if = (0 + ... + static_cast<bool>(Pred(std::type_identity<Ts>{})));
 
   template <typename T, typename... Ts>
-  constexpr inline bool containts = count<T, Ts...> != 0;
+  constexpr inline bool contains = count<T, Ts...> != 0;
 
 }  // namespace sttl
 
@@ -277,13 +277,14 @@ namespace sttl {
 
   // returns index of first T in Ts...
   template <typename T, typename... Ts>
-  constexpr inline size_t find_first = [] {
-    size_t result = sttl::npos;
-    size_t i = -1;
-    // for guaranteed sequence
-    ORDERED{((++i, std::is_same_v<T, Ts>) && result == sttl::npos && (result = i))...};
-    return result;
-  }  // INVOKED HERE
+  constexpr inline size_t find_first =
+      [] {
+        size_t result = sttl::npos;
+        size_t i = -1;
+        // for guaranteed sequence
+        ORDERED{((++i, std::is_same_v<T, Ts>)&&result == sttl::npos && (result = i))...};
+        return result;
+      }  // INVOKED HERE
   ();
 
   template <auto Pred, typename... Ts, size_t... Is>
@@ -337,22 +338,24 @@ namespace sttl {
   using filter = decltype(filter_impl<Pred, Ts...>());  // INVOKED HERE
 
   template <typename T, typename... Ts>
-  constexpr inline size_t find_last = [] {
-    size_t index = npos;
-    size_t i = -1;
-    ORDERED{((++i, std::is_same_v<T, Ts>) && (index = i))...};
-    return index;
-  }  // INVOKED HERE
+  constexpr inline size_t find_last =
+      [] {
+        size_t index = npos;
+        size_t i = -1;
+        ORDERED{((++i, std::is_same_v<T, Ts>)&&(index = i))...};
+        return index;
+      }  // INVOKED HERE
   ();
 
   // Why int_least64_t?
   // - no unsigned type because may be signed
   // - no intmax_t, because can have different MAX on different platforms,
-  // so possible a compilation error for same code like integer_literal<1000000>; 
+  // so possible a compilation error for same code like integer_literal<1000000>;
   //- int64_t is optional by C++ standard, platform can not support it
-  template<std::int_least64_t Value>
+  template <std::int_least64_t Value>
   struct integer_literal : constant<Value> {
-    // must be <= int64_t max, for case when int_least64 is more then 64 bit, same compilations on every platform
+    // must be <= int64_t max, for case when int_least64 is more then 64 bit, same compilations on every
+    // platform
     static_assert(Value <= 0xff'ff'ff'ff'ff'ff'ff'ff);
     CONSTEVAL auto operator-() const noexcept {
       return integer_literal<-Value>{};
@@ -360,18 +363,20 @@ namespace sttl {
     CONSTEVAL auto operator+() const noexcept {
       return integer_literal<Value>{};
     }
+    // clang-format off
     template <std::integral T>
-    requires (std::in_range<T>(Value))
+    requires(std::in_range<T>(Value))
     constexpr operator T() const noexcept {
+      // clang-format on
       return Value;
     }
   };
 
-  #if defined(__clang__) || defined(__GNUC__)
-  #define PRETTY_FUNC_NAME __PRETTY_FUNCTION__
-  #elif defined(_MSC_VER)
-  #define PRETTY_FUNC_NAME __FUNCSIG__
-  #endif
+#if defined(__clang__) || defined(__GNUC__)
+#define PRETTY_FUNC_NAME __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+#define PRETTY_FUNC_NAME __FUNCSIG__
+#endif
   // NOT NULLTERMINATED
   template <typename Char, size_t N>
   struct fixed_string {
@@ -384,7 +389,7 @@ namespace sttl {
     constexpr fixed_string(const Char (&arr)[N + 1]) noexcept {
       std::copy_n(std::begin(arr), N, chars.begin());
     }
-    template<typename Traits>
+    template <typename Traits>
     constexpr fixed_string(std::array<Char, N> arr) noexcept : chars(arr) {
     }
     static constexpr size_t size() noexcept {
@@ -410,7 +415,7 @@ namespace sttl {
 
   template <typename Char, size_t N0, size_t N1>
   constexpr fixed_string<Char, N0 + N1> operator+(const fixed_string<Char, N0>& left,
-                                                         const fixed_string<Char, N1>& right) noexcept {
+                                                  const fixed_string<Char, N1>& right) noexcept {
     fixed_string<Char, N0 + N1> result{};
     auto it = std::copy(left.begin(), left.end(), result.begin());
     std::copy(right.begin(), right.end(), it);
@@ -449,25 +454,26 @@ namespace sttl {
     CONSTEVAL auto operator<=>(string_literal<L>) const noexcept {
       return V <=> L;
     }
-
   };
 
   namespace types {
 
     template <typename T, pack P>
-    constexpr inline size_t count = []<typename... Ts>(typevec<Ts...>) {
-      return (0 + ... + std::is_same_v<T, Ts>);
-    }  // INVOKED HERE
+    constexpr inline size_t count =
+        []<typename... Ts>(typevec<Ts...>) {
+          return (0 + ... + std::is_same_v<T, Ts>);
+        }  // INVOKED HERE
     (P{});
 
     template <unary_predicate auto Pred, pack P>
-    constexpr inline size_t count_if = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::count_if<Pred, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline size_t count_if =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::count_if<Pred, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <typename T, pack P>
-    constexpr inline bool containts = count<T, P> != 0;
+    constexpr inline bool contains = count<T, P> != 0;
 
     template <unary_predicate auto Pred, pack P>
     using filter = decltype(filter_impl<Pred>(P{}));
@@ -479,21 +485,24 @@ namespace sttl {
         decltype(rotate_impl < N >= 0 ? N : P::size + N > (P{}, std::make_index_sequence<P::size>{}));
 
     template <pack P, unary_predicate auto Pred>
-    constexpr inline bool all_of = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::all_of<Pred, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline bool all_of =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::all_of<Pred, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <pack P, unary_predicate auto Pred>
-    constexpr inline bool atleast_one_of = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::atleast_one_of<Pred, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline bool atleast_one_of =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::atleast_one_of<Pred, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <pack P, unary_predicate auto Pred>
-    constexpr inline bool none_of = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::none_of<Pred, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline bool none_of =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::none_of<Pred, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <size_t I, pack P>
@@ -527,9 +536,10 @@ namespace sttl {
     constexpr inline size_t find = noexport::typevec_index_impl<T, P>(0);
 
     template <typename T, pack P>
-    constexpr inline size_t find_first = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::find_first<T, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline size_t find_first =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::find_first<T, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <pack P>
@@ -584,9 +594,10 @@ namespace sttl {
     using push_back = decltype(push_back_impl<T>(U{}));
 
     template <typename T, pack P>
-    constexpr inline size_t find_last = []<typename... Ts>(typevec<Ts...>) {
-      return ::sttl::find_last<T, Ts...>;
-    }  // INVOKED HERE
+    constexpr inline size_t find_last =
+        []<typename... Ts>(typevec<Ts...>) {
+          return ::sttl::find_last<T, Ts...>;
+        }  // INVOKED HERE
     (P{});
 
     template <pack Small, pack Big>
@@ -659,13 +670,13 @@ namespace sttl {
         constexpr size_t sz = [compare] {
           std::array vec{projected_v<Types, Proj>...};
           std::sort(vec.begin(), vec.end(), compare);
-          auto last = std::unique(vec.begin(), vec.end()); // TODO compare here same as for sort?
+          auto last = std::unique(vec.begin(), vec.end());  // TODO compare here same as for sort?
           return std::distance(vec.begin(), last);
         }();
         constexpr auto arr = [compare]<size_t Sz>(constant<Sz>) {
           std::array vec{projected_v<Types, Proj>...};
           std::sort(vec.begin(), vec.end(), compare);
-          (void)std::unique(vec.begin(), vec.end()); // TODO compare here same as for sort ?
+          (void)std::unique(vec.begin(), vec.end());  // TODO compare here same as for sort ?
           std::array<projected_t<Proj>, Sz> result;
           std::copy_n(vec.begin(), Sz, result.begin());
           return result;
@@ -695,17 +706,40 @@ namespace sttl {
   template <typename... Ts>
   using last_t = typename decltype((std::type_identity<notype>{}, ..., std::type_identity<Ts>{}))::type;
 
-  // variant Compile Time
-  // can contain references, const and volatile types only when initialized from std::type_identity<T>!
-  template <typename... Ts>
+  template <typename T, auto Value>
+  struct enum_value_t {
+    using type = T;
+    using value_type = decltype(Value);
+    static constexpr auto value = Value;
+
+    constexpr operator std::type_identity<T>() const noexcept {
+      return std::type_identity<T>{};
+    }
+  };
+
+  template <typename T, auto Value>
+  constexpr inline auto enum_value = enum_value_t<T, Value>{};
+  // enum, where names replaced with types (std::type_identity<T>)
+  // types must be unique(Values may be non unique)
+  template <enum_value_t... Ts>
   struct tagged_enum {
+   private:
+    enum { check = assert_unique<typename decltype(Ts)::type...> };
+   public:
     using size_type = std::conditional_t<(sizeof...(Ts) < std::numeric_limits<uint_least8_t>::max()),
                                          std::uint_least8_t, std::size_t>;
+    static constexpr std::array values{Ts.value...};  // also checks they are same type all
+    using typevec_type = typevec<typename decltype(Ts)::type...>;
     // not private because it must be literal type
-    size_type _index = static_cast<size_type>(-1);
+    size_type _index;
 
-    constexpr tagged_enum() = default;
-
+    // clang-format off
+    template <typename T, auto Value>
+    requires(contains<enum_value_t<T, Value>, decltype(Ts)...>)
+    constexpr tagged_enum(enum_value_t<T, Value>) noexcept
+        : _index(find_first<enum_value_t<T, Value>, decltype(Ts)...>) {
+    }
+    // clang-format on
     // precondition : 'i' must be in range [0, sizeof...(Ts))
     constexpr tagged_enum(size_type i) noexcept : _index(i) {
       assert(i < sizeof...(Ts));
@@ -718,9 +752,9 @@ namespace sttl {
     }
     // clang-format off
     template <typename T>
-    requires(containts<T, Ts...>)
+    requires(contains<T, typename decltype(Ts)::type...>)
     constexpr tagged_enum(std::type_identity<T>) noexcept
-        : _index(find_first<T, Ts...>)
+        : _index(find_first<T, typename decltype(Ts)::type...>)
     {}
     // clang-format on
     constexpr tagged_enum(const tagged_enum&) = default;
@@ -733,24 +767,34 @@ namespace sttl {
     }
   };
 
-  // visit for tagged_enum
+  // associates each type in Ts with its index in pack,
+  // like enum { a, b, c } a = 0, b = 1, c = 2 etc
+  template<typename... Ts>
+  using Enum = tagged_enum<enum_value<Ts, find_first<Ts, Ts...>>...>;
 
+  // invokes function F with enum_value<Type, Value>... from Vars
   // exactly one instanciation of function F
-  template <instance_of<tagged_enum> auto... Vars, typename F>
+  // clang-format off
+  template <auto... Vars, typename F>
+  requires(((Vars.index() < Vars.values.size()) && ...))
   constexpr decltype(auto) visit_enum(F&& foo) {
+    // clang-format on
     return std::forward<F>(foo)(
-        std::type_identity<types::element_t<Vars.index(), types::extract<decltype(Vars)>>>{}...);
+        enum_value<types::element_t<Vars.index(), typename decltype(Vars)::typevec_type>,
+                   Vars.values[Vars.index()]>...);
   }
-  // similar to std::visit, but for enum
-  template <typename F, typename... Ts>
-  constexpr decltype(auto) visit_enum(F&& f, tagged_enum<Ts...> ts) {
-    constexpr std::array tbl{[]<typename T>(std::type_identity<T>) {
-      return +[](F&& _f) {
-        return _f(std::type_identity<Ts>{});
-      };
-    }(std::type_identity<Ts>{})...};
-    return tbl[ts.index()](std::forward<F>(f));
+  // invokes function F with enum_value<Type, Value> currently contained in 'var'
+  template <typename F, enum_value_t... Ts>
+  constexpr decltype(auto) visit_enum(F&& f, tagged_enum<Ts...> var) {
+    constexpr std::array tbl{[]<typename T, auto Value>(enum_value_t<T, Value>){return +[](F&& _f) {
+      return _f(Ts);
+    };
   }
+  (Ts)...
+};
+    return tbl[var.index()](std::forward<F>(f));
+  }
+  // invokes function F with enum_value<Type, Value>... currently contained in 'vars'...
   template<typename F, typename V1, typename... Vs>
   constexpr decltype(auto) visit_enum(F&& f, V1 var, Vs... vars) {
     return ::sttl::visit_enum(
