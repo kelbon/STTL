@@ -1151,7 +1151,7 @@ namespace sttl {
       #ifdef _MSC_VER
       __assume(false);
       #else
-      __builtin_unreachable()
+      __builtin_unreachable();
       #endif
       // TODO std::unreachable()
     } else {
