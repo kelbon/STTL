@@ -838,7 +838,13 @@ namespace sttl {
   template <typename F, enumerator_t... Vs>
   constexpr decltype(auto) visit_enum(F&& f, tagged_enum<Vs...> enum0) {
     constexpr std::size_t count = sizeof...(Vs);
-    if constexpr (count < 300) {
+    // without optimizations so much useless labels generated
+    #ifdef _NDEBUG
+    constexpr bool RELEASE = true;
+    #else
+    constexpr bool RELEASE = false;
+    #endif
+    if constexpr (count < 300 && RELEASE) {
       switch (enum0.index()) {
 #ifdef _MSC_VER
 #define STTL_UNREACHABLE __assume(false);
