@@ -25,7 +25,7 @@ int main() {
   constexpr auto la = "hello"_fixs + "world"_fixs;
   (void)la;
   static_assert(Fooo(-0_i) == true);
-  static_assert(Fooo(+0_i) ==true);
+  static_assert(Fooo(+0_i) == true);
   static_assert(Fooo("hello"_s) == 4);
   static_assert(Fooo(-+150_i) == true);
   static_assert(Fooo(-111_i) == true);
@@ -71,36 +71,45 @@ int main() {
 
   static_assert(std::is_same_v<sttl::element_t<0, int, float, double>, int>);
   static_assert(std::is_same_v<sttl::try_element_t<3, int, float, double>, sttl::notype>);
-  static_assert(std::is_same_v<sttl::types::try_element_t<3, sttl::typevec<int, float, double>>, sttl::notype>);
+  static_assert(
+      std::is_same_v<sttl::types::try_element_t<3, sttl::typevec<int, float, double>>, sttl::notype>);
   static_assert(std::is_same_v<sttl::try_element_t<0, int, float, double>, int>);
   static_assert(std::is_same_v<sttl::types::try_element_t<0, sttl::typevec<int, float, double>>, int>);
   static_assert(std::is_same_v<sttl::element_t<0, void>, void>);
   static_assert(std::is_same_v<sttl::types::element_t<0, sttl::typevec<void>>, void>);
 
-  using var = sttl::Enum<int, float, double, bool>;
+  using var = sttl::type_enum<int, float, double, bool>;
   static_assert(sttl::contains<int, int, float>);
   static_assert(sttl::contains<void, int, float, void>);
   static_assert(sttl::contains<int, int>);
   static_assert(!sttl::contains<char, int, float>);
   static_assert(!sttl::contains<int>);
-  constexpr auto xvar = var{0};
+  constexpr auto xvar = var{sttl::index(0)};
+  static_assert(std::is_convertible_v<sttl::valuevec<'5', 1>, sttl::valuevec<int('5'), 1>>);
   constexpr auto yvar = var{std::type_identity<bool>{}};
-  using my_enum = sttl::tagged_enum<sttl::enum_value<int, 4>, sttl::enum_value<float, 8>,
-                                    sttl::enum_value<bool, 1>, sttl::enum_value<char, 16>>;
+  using my_enum = sttl::tagged_enum<sttl::enumerator<int, 4>, sttl::enumerator<float, 8>,
+                                    sttl::enumerator<bool, 1>, sttl::enumerator<char, 16>>;
   static_assert(sttl::visit_enum(
-      []<typename... Ts>(Ts...) {
-        return std::is_same_v<sttl::typevec<typename Ts::type...>, sttl::typevec<int, char, bool>> &&
-               std::is_same_v<std::index_sequence<Ts::value...>, std::index_sequence<4, 16, 1>>;
+      []<typename... Ts, auto... Values>(sttl::enumerator_t<Ts, Values>...) {
+        return std::is_same_v<sttl::typevec<Ts...>, sttl::typevec<int, char, bool>> &&
+               std::is_same_v<sttl::valuevec<Values...>, sttl::valuevec<4, 16, 1>>;
       },
-      my_enum(0), my_enum(3), my_enum(2)));
-  static_assert(sttl::visit_enum(
-      []<typename... Ts>(Ts...) {
-        return std::is_same_v<sttl::typevec<typename Ts::type...>, sttl::typevec<int, bool, int>>;
-      },
-      xvar, yvar, xvar));
-  static_assert(sttl::visit_enum<xvar, yvar, xvar, xvar>([]<typename... Ts>(Ts...) {
-                  return (sizeof(typename Ts::type) + ...);
+      my_enum(sttl::index(0)), my_enum(sttl::index(3)), my_enum(sttl::index(2))));
+  static_assert(sttl::visit_types(
+      []<typename T>(T) { return std::is_same_v<T, sttl::typevec<int, bool, int>>; }, xvar, yvar, xvar));
+  static_assert(sttl::visit_types<xvar, yvar, xvar, xvar>([]<typename... Ts>(sttl::typevec<Ts...>) {
+                  return (sizeof(Ts) + ...);
                 }) == (sizeof(bool) + 3 * sizeof(int)));
+  enum struct A { a };
+  enum struct B { b };
+  using my_enum_ab = sttl::Enum<A::a, B::b>;
+  constexpr my_enum_ab ab_v = sttl::valuevec<A::a>{};
+  constexpr my_enum_ab ab_vv(sttl::index(1));
+  static_assert(sttl::visit_values(sttl::pattern_matching<[](sttl::valuevec<A::a, B::b>) { return true; },
+                                                          [](auto&&...) {
+                                                            return false;
+                                                          }>,
+                                   ab_v, ab_vv));
   constexpr auto _1 = []<sttl::one_of<int, float> T, sttl::not_a<double> U>(T, U) {
     return 0;
   };
