@@ -725,6 +725,7 @@ namespace sttl {
   struct tagged_enum {
    private:
     enum { check = assert_unique<typename decltype(Ts)::type...> };
+
    public:
     using size_type = std::conditional_t<(sizeof...(Ts) < std::numeric_limits<uint_least8_t>::max()),
                                          std::uint_least8_t, std::size_t>;
@@ -769,7 +770,7 @@ namespace sttl {
 
   // associates each type in Ts with its index in pack,
   // like enum { a, b, c } a = 0, b = 1, c = 2 etc
-  template<typename... Ts>
+  template <typename... Ts>
   using Enum = tagged_enum<enum_value<Ts, find_first<Ts, Ts...>>...>;
 
   // invokes function F with enum_value<Type, Value>... from Vars
@@ -786,16 +787,11 @@ namespace sttl {
   // invokes function F with enum_value<Type, Value> currently contained in 'var'
   template <typename F, enum_value_t... Ts>
   constexpr decltype(auto) visit_enum(F&& f, tagged_enum<Ts...> var) {
-    constexpr std::array tbl{[]<typename T, auto Value>(enum_value_t<T, Value>){return +[](F&& _f) {
-      return _f(Ts);
-    };
-  }
-  (Ts)...
-};
+    constexpr std::array tbl{(+[](F&& _f) { return _f(Ts); })...};
     return tbl[var.index()](std::forward<F>(f));
   }
   // invokes function F with enum_value<Type, Value>... currently contained in 'vars'...
-  template<typename F, typename V1, typename... Vs>
+  template <typename F, typename V1, typename... Vs>
   constexpr decltype(auto) visit_enum(F&& f, V1 var, Vs... vars) {
     return ::sttl::visit_enum(
         [&](auto&& v) { return ::sttl::visit_enum(std::bind_front(std::forward<F>(f), v), vars...); }, var);
@@ -834,14 +830,14 @@ namespace sttl {
   using first_t = T0;
 
   // for better quality of fcn code in 2k22
-  template<typename T, size_t N>
+  template <typename T, size_t N>
   using c_array = T[N];
 
   // for creating concepts for checking if invocable without conversations
   // Example:
   // template<typename T> concept X = requires(exactly<int> i, T value) { T.foo(i); }
   // checks if T has foo which accepts exactly int without conversations (or accepts any type)
-  template<typename T>
+  template <typename T>
   struct exactly {
     template <std::same_as<T> U>
     constexpr operator U() noexcept;
