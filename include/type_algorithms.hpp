@@ -15,16 +15,6 @@
 #include <functional>
 #include <limits>
 
-// TODO waiting for support
-#ifdef _MSC_VER
-#ifndef __clang__
-#define CONSTEVAL consteval
-#else
-#define CONSTEVAL constexpr
-#endif
-#else
-#define CONSTEVAL constexpr
-#endif
 // Yes, msvc do not support EBO which is already GUARANTEED by C++ standard for ~13 years
 #if defined(_MSC_VER)
 #define AA_MSVC_EBO __declspec(empty_bases)
@@ -46,7 +36,7 @@ namespace noexport {
   struct AA_MSVC_EBO typevecimpl<std::index_sequence<Is...>, Ts...> : ::sttl::typenode<Ts, Is>... {};
 
   // for integer_literal
-  CONSTEVAL std::int_least64_t parse_int(std::initializer_list<char> list) {
+  constexpr std::int_least64_t parse_int(std::initializer_list<char> list) {
     std::int_least64_t result = 0;
     for (auto v : list) {
       std::int_least64_t digit = v - '0';
@@ -85,7 +75,7 @@ namespace sttl {
       return true;
     }
     template<one_of<std::nullptr_t, std::nullopt_t> T>
-    CONSTEVAL operator T() const noexcept {
+    constexpr operator T() const noexcept {
       struct _ {
       } any_empty;
       return std::bit_cast<T>(any_empty);
@@ -212,26 +202,26 @@ namespace sttl {
 namespace noexport {
 
   template <size_t I, typename T>
-  CONSTEVAL auto try_typevec_element(::sttl::typenode<T, I>) -> std::type_identity<T>;
+  constexpr auto try_typevec_element(::sttl::typenode<T, I>) -> std::type_identity<T>;
 
   template <size_t I, typename T>
-  CONSTEVAL auto try_typevec_element_impl(int) -> decltype(try_typevec_element<I>(T{}));
+  constexpr auto try_typevec_element_impl(int) -> decltype(try_typevec_element<I>(T{}));
   template <size_t, typename>
-  CONSTEVAL auto try_typevec_element_impl(...) -> std::type_identity<sttl::notype>;
+  constexpr auto try_typevec_element_impl(...) -> std::type_identity<sttl::notype>;
 
   template <size_t I, typename T>
-  CONSTEVAL auto typevec_element(::sttl::typenode<T, I>&&) -> std::type_identity<T>;
+  constexpr auto typevec_element(::sttl::typenode<T, I>&&) -> std::type_identity<T>;
 
   template <typename T, size_t I>
-  CONSTEVAL size_t typevec_index(::sttl::typenode<T, I>&&) noexcept {
+  constexpr size_t typevec_index(::sttl::typenode<T, I>&&) noexcept {
     return I;
   }
   template <typename T, typename Pack>
-  CONSTEVAL auto typevec_index_impl(int)->decltype(typevec_index<T>(Pack{})) {
+  constexpr auto typevec_index_impl(int)->decltype(typevec_index<T>(Pack{})) {
     return typevec_index<T>(Pack{});
   }
   template <typename, typename>
-  CONSTEVAL size_t typevec_index_impl(...) {
+  constexpr size_t typevec_index_impl(...) {
     return ::sttl::npos;
   }
 
@@ -288,13 +278,13 @@ namespace sttl {
   ();
 
   template <auto Pred, typename... Ts, size_t... Is>
-  CONSTEVAL size_t find_if_impl(typevec<Ts...>, std::index_sequence<Is...>) {
+  constexpr size_t find_if_impl(typevec<Ts...>, std::index_sequence<Is...>) {
     size_t index = npos;
     ORDERED{(static_cast<bool>(Pred(std::type_identity<Ts>{})) && index == npos && (index = Is))...};
     return index;
   }
   template <auto Pred, typename... Ts, size_t... Is>
-  CONSTEVAL size_t find_if_not_impl(typevec<Ts...>, std::index_sequence<Is...>) {
+  constexpr size_t find_if_not_impl(typevec<Ts...>, std::index_sequence<Is...>) {
     size_t index = npos;
     ORDERED{(!static_cast<bool>(Pred(std::type_identity<Ts>{})) && index == npos && (index = Is))...};
     return index;
@@ -313,11 +303,11 @@ namespace sttl {
 
   // N may be < 0, but even in this case its correctly works
   template <size_t N, typename... Ts, size_t... Is>
-  CONSTEVAL auto rotate_impl(typevec<Ts...>, std::index_sequence<Is...>)
+  constexpr auto rotate_impl(typevec<Ts...>, std::index_sequence<Is...>)
       -> typevec<element_t<(N + Is) % sizeof...(Is), Ts...>...>;
 
   template <auto Pred, typename... Ts>
-  CONSTEVAL auto filter_impl(typevec<Ts...> = {}) {
+  constexpr auto filter_impl(typevec<Ts...> = {}) {
     constexpr auto indexes = [] {
       std::array<size_t, count_if<Pred, Ts...>> indexes{};
       size_t array_index = 0;
@@ -357,10 +347,10 @@ namespace sttl {
     // must be <= int64_t max, for case when int_least64 is more then 64 bit, same compilations on every
     // platform
     static_assert(Value <= 0xff'ff'ff'ff'ff'ff'ff'ff);
-    CONSTEVAL auto operator-() const noexcept {
+    constexpr auto operator-() const noexcept {
       return integer_literal<-Value>{};
     }
-    CONSTEVAL auto operator+() const noexcept {
+    constexpr auto operator+() const noexcept {
       return integer_literal<Value>{};
     }
     // clang-format off
@@ -426,7 +416,7 @@ namespace sttl {
   fixed_string(Char (&)[N]) -> fixed_string<std::remove_const_t<Char>, N - 1>;
 
   template <typename T>
-  CONSTEVAL auto type_name_impl() {
+  constexpr auto type_name_impl() {
     return fixed_string<char, sizeof(PRETTY_FUNC_NAME) - 1>{PRETTY_FUNC_NAME};
   }
   template <typename T>
@@ -440,18 +430,18 @@ namespace sttl {
 
     // comparing as NTTP
 
-    CONSTEVAL bool operator==(string_literal) const noexcept {
+    constexpr bool operator==(string_literal) const noexcept {
       return true;
     }
     template <fixed_string L>
-    CONSTEVAL bool operator==(string_literal<L>) const noexcept {
+    constexpr bool operator==(string_literal<L>) const noexcept {
       return false;
     }
-    CONSTEVAL auto operator<=>(string_literal) const noexcept {
+    constexpr auto operator<=>(string_literal) const noexcept {
       return std::strong_ordering::equal;
     }
     template <fixed_string L>
-    CONSTEVAL auto operator<=>(string_literal<L>) const noexcept {
+    constexpr auto operator<=>(string_literal<L>) const noexcept {
       return V <=> L;
     }
   };
@@ -509,7 +499,7 @@ namespace sttl {
     using try_element_t = typename decltype(noexport::try_typevec_element_impl<I, P>(0))::type;
 
     template <pack P0, pack P1, size_t... Is>
-    CONSTEVAL auto mismatch_impl(P0, P1, std::index_sequence<Is...>) {
+    constexpr auto mismatch_impl(P0, P1, std::index_sequence<Is...>) {
       constexpr size_t index = [] {
         size_t index = npos;
         ((!std::is_same_v<try_element_t<Is, P0>, try_element_t<Is, P1>> && index == npos && (index = Is)),
@@ -549,15 +539,15 @@ namespace sttl {
     using first_t = try_element_t<0, P>;
 
     template <typename... Ts, size_t... Is>
-    CONSTEVAL auto reverse_impl(typevec<Ts...>, std::index_sequence<Is...>)
+    constexpr auto reverse_impl(typevec<Ts...>, std::index_sequence<Is...>)
         -> typevec<element_t<sizeof...(Is) - 1 - Is, typevec<Ts...>>...>;
 
     template <pack P>
     using reverse = decltype(reverse_impl(P{}, std::make_index_sequence<P::size>{}));
 
     template <typename T0, typename... Ts>
-    CONSTEVAL auto pop_front_impl(typevec<T0, Ts...>) -> typevec<Ts...>;
-    CONSTEVAL auto pop_front_impl(typevec<>) -> notype;
+    constexpr auto pop_front_impl(typevec<T0, Ts...>) -> typevec<Ts...>;
+    constexpr auto pop_front_impl(typevec<>) -> notype;
 
     template <pack T>
     using pop_front = decltype(pop_front_impl(T{}));
@@ -571,9 +561,9 @@ namespace sttl {
     }())::type;
 
     template <typename What, typename T0, typename... Ts>
-    CONSTEVAL auto replace_front_with_impl(typevec<T0, Ts...>) -> typevec<What, Ts...>;
+    constexpr auto replace_front_with_impl(typevec<T0, Ts...>) -> typevec<What, Ts...>;
     template <typename>
-    CONSTEVAL auto replace_front_with_impl(typevec<>) -> notype;
+    constexpr auto replace_front_with_impl(typevec<>) -> notype;
 
     template <typename T, pack P>
     using replace_front_with = decltype(replace_front_with_impl<T>(P{}));
@@ -582,10 +572,10 @@ namespace sttl {
     using replace_back_with = reverse<replace_front_with<T, reverse<P>>>;
 
     template <typename T, typename... Ts>
-    CONSTEVAL auto push_front_impl(typevec<Ts...>) -> typevec<T, Ts...>;
+    constexpr auto push_front_impl(typevec<Ts...>) -> typevec<T, Ts...>;
 
     template <typename T, typename... Ts>
-    CONSTEVAL auto push_back_impl(typevec<Ts...>) -> typevec<Ts..., T>;
+    constexpr auto push_back_impl(typevec<Ts...>) -> typevec<Ts..., T>;
 
     template <typename T, pack U>
     using push_front = decltype(push_front_impl<T>(U{}));
@@ -607,22 +597,22 @@ namespace sttl {
     constexpr inline bool ends_with = starts_with<Small, reverse<Big>>;
 
     template <typename Pack, size_t B, size_t E, size_t... Is>
-    CONSTEVAL auto subrange_impl(std::index_sequence<Is...>) -> typevec<element_t<Is + B, Pack>...>{};
+    constexpr auto subrange_impl(std::index_sequence<Is...>) -> typevec<element_t<Is + B, Pack>...>{};
 
     // returns typevec with types [B; E) indexes from pack P
     template <pack P, size_t B, size_t E = P::size>
     using subrange = decltype(subrange_impl<P, B, E>(std::make_index_sequence<E - B>{}));
 
     template <template <typename...> typename Template, typename... Ts>
-    CONSTEVAL auto extract_impl(Template<Ts...>) -> typevec<Ts...>;
-    CONSTEVAL auto extract_impl(auto&&) -> notype;
+    constexpr auto extract_impl(Template<Ts...>) -> typevec<Ts...>;
+    constexpr auto extract_impl(auto&&) -> notype;
 
     // returns typevec with template arguments of T or notype if it is not a specialization
     template <typename T>
     using extract = decltype(extract_impl(std::declval<T>()));
 
     template <template <typename...> typename Template, typename... Ts>
-    CONSTEVAL auto insert_impl(typevec<Ts...>) -> Template<Ts...>;
+    constexpr auto insert_impl(typevec<Ts...>) -> Template<Ts...>;
 
     // returns type which is a specialization of Template with types from P
     template <template <typename...> typename Template, pack P>
@@ -663,7 +653,7 @@ namespace sttl {
     };
 
     template <projection Proj, typename... Types, typename Compare>
-    CONSTEVAL auto sort_impl(typevec<Types...>, Compare compare = {}, Proj proj = {}) {
+    constexpr auto sort_impl(typevec<Types...>, Compare compare = {}, Proj proj = {}) {
       if constexpr (sizeof...(Types) < 2)
         return typevec<Types...>{};
       else {
@@ -1261,13 +1251,13 @@ namespace sttl {
 // in global namespace because its really global(for all literals),
 // and dont need using namespace...
 template <sttl::fixed_string L>
-CONSTEVAL auto operator""_fixs() noexcept {
+constexpr auto operator""_fixs() noexcept {
   return L;
 }
 
 // int literal
 template <char... Vals>
-CONSTEVAL auto operator""_i() noexcept {
+constexpr auto operator""_i() noexcept {
   constexpr std::array arr{Vals...};
   static_assert(!(sizeof...(Vals) > 1 && arr[0] == '0'), "Octal integer literals are not supported");
   return sttl::integer_literal<noexport::parse_int({Vals...})>{};
@@ -1275,7 +1265,7 @@ CONSTEVAL auto operator""_i() noexcept {
 // TODO rename _s into _ and _i into _ for common interface(now bug in MSVC)
 // string literal
 template <sttl::fixed_string L>
-CONSTEVAL auto operator""_s() noexcept {
+constexpr auto operator""_s() noexcept {
   return sttl::string_literal<L>{};
 }
 
