@@ -107,6 +107,7 @@ int main() {
   constexpr my_enum_ab ab_vv(sttl::index_t(1));
   static_assert(ab_vv == sttl::index_t(1));
   static_assert(ab_vv == sttl::valuevec<B::b>{});
+  static_assert(ab_vv == std::type_identity<sttl::valuevec<B::b>>{});
   static_assert(sttl::visit_values(sttl::pattern_matching<[](sttl::valuevec<A::a, B::b>) { return true; },
                                                           [](auto&&...) {
                                                             return false;

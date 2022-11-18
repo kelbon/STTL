@@ -800,6 +800,10 @@ namespace sttl {
     constexpr bool operator==(const T&) const noexcept {
       return _index == find_first<T, typename decltype(Ts)::type...>;
     }
+    template <one_of<typename decltype(Ts)::type...> T>
+    constexpr bool operator==(std::type_identity<T>) const noexcept {
+      return _index == find_first<T, typename decltype(Ts)::type...>;
+    }
   };
 
   // Types must be unique
