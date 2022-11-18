@@ -15,6 +15,8 @@
 #include <functional>
 #include <limits>
 
+#define disable_if(...) requires requires { requires(__VA_ARGS__) == (__LINE__, false); }
+
 // Yes, msvc do not support EBO which is already GUARANTEED by C++ standard for ~13 years
 #if defined(_MSC_VER)
 #define AA_MSVC_EBO __declspec(empty_bases)
@@ -749,15 +751,13 @@ namespace sttl {
     // analogue for 'enum A { a }; A val = A::a;'
     // for expressions like my_enum val = int{}; etc
     // clang-format off
-    template <typename T>
-    requires(contains<T, typename decltype(Ts)::type...>)
+    template <one_of<typename decltype(Ts)::type...> T>
     constexpr tagged_enum(const T&) noexcept
         : _index(find_first<T, typename decltype(Ts)::type...>)
     {}
     // ctor from type ('name' of value for this enum)
     // analogue for 'enum A { a }; A val = A::a;'
-    template <typename T>
-    requires(contains<T, typename decltype(Ts)::type...>)
+    template <one_of<typename decltype(Ts)::type...> T>
     constexpr tagged_enum(std::type_identity<T>) noexcept
         : _index(find_first<T, typename decltype(Ts)::type...>)
     {}
@@ -774,16 +774,14 @@ namespace sttl {
       return *this;
     }
     // clang-format off
-    template<typename T>
-    requires(contains<T, typename decltype(Ts)::type...>)
+    template<one_of<typename decltype(Ts)::type...> T>
     constexpr tagged_enum& operator=(const T&) noexcept {
       // clang-format on
       _index = find_first<T, typename decltype(Ts)::type...>;
       return *this;
     }
     // clang-format off
-    template<typename T>
-    requires(contains<T, typename decltype(Ts)::type...>)
+    template<one_of<typename decltype(Ts)::type...> T>
     constexpr tagged_enum& operator=(std::type_identity<T>) noexcept {
       // clang-format on
       _index = find_first<T, typename decltype(Ts)::type...>;
@@ -793,6 +791,14 @@ namespace sttl {
     // returns runtime index of enumerator 'stored' currently
     constexpr size_t index() const noexcept {
       return _index;
+    }
+
+    constexpr bool operator==(index_t i) const noexcept {
+      return i.i == _index;
+    }
+    template <one_of<typename decltype(Ts)::type...> T>
+    constexpr bool operator==(const T&) const noexcept {
+      return _index == find_first<T, typename decltype(Ts)::type...>;
     }
   };
 
